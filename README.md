@@ -261,7 +261,9 @@ backend/
 │   │   ├── events/
 │   │   ├── specifications/
 │   │   ├── exceptions/
-│   │   └── enums/
+│   │   ├── policies/
+│   │   ├── enums/
+│   │   └── shared/
 │   │
 │   ├── application/
 │   │   ├── dto/
