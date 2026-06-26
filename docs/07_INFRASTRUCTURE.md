@@ -1,6 +1,6 @@
-# 06_INFRASTRUCTURE_LAYER.md
+# 06_INFRASTRUCTURE.md
 
-# Infrastructure Layer
+# Infrastructure
 
 **Проект:** DanceMate
 **Версия:** 1.0
