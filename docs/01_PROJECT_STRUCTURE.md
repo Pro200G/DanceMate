@@ -1,485 +1,387 @@
-# PROJECT_STRUCTURE.md
+# 01_PROJECT_STRUCTURE.md
 
-> **Проект:** DanceMate
-> **Тип проекта:** Кроссплатформенное мобильное приложение для поиска танцевальных партнеров
-> **Архитектура:** Clean Architecture + Domain-Driven Design (DDD) + SOLID + Repository Pattern + Unit of Work + CQRS (частично) + Event-Driven Components
-> **Backend:** Python 3.13 + FastAPI + SQLAlchemy 2.x + PostgreSQL 17 + Redis + Celery + WebSocket
-> **Frontend:** Flutter (Android / iOS)
-> **Версия документа:** 1.0
+# Project Structure Overview
+
+**Проект:** DanceMate
+**Тип:** Кроссплатформенная социальная платформа для танцевального сообщества
+**Архитектура:** Clean Architecture + DDD + SOLID + Repository + Unit of Work + CQRS (частично) + Event-driven ready
+**Backend:** Python 3.13 + FastAPI + SQLAlchemy 2.x + PostgreSQL 17 + Redis + Celery + WebSocket
+**Frontend:** Flutter (iOS / Android)
+**Документация:** 18 архитектурных документов
 
 ---
 
 # 1. Назначение документа
 
-Документ описывает архитектуру проекта DanceMate.
+Этот документ является **точкой входа в архитектуру проекта**.
 
 Он определяет:
 
-* структуру каталогов проекта;
-* ответственность каждого слоя;
-* зависимости между слоями;
-* правила разработки новых модулей;
-* принципы организации кода;
+* общую структуру репозитория;
+* назначение всех каталогов;
+* связи между частями системы;
+* навигацию по архитектурной документации;
 * правила масштабирования проекта.
 
-Настоящий документ является основным архитектурным документом проекта.
-
-Все остальные документы являются его дополнением.
-
 ---
 
-# 2. Архитектурные принципы
-
-Проект строится на следующих принципах.
-
-## SOLID
-
-Каждый компонент имеет единственную ответственность.
-
-Модули открыты для расширения и закрыты для изменения.
-
-Все зависимости строятся через абстракции.
-
-Интерфейсы разделяются по ответственности.
-
-Наследники полностью взаимозаменяемы.
-
----
-
-## Clean Architecture
-
-Зависимости всегда направлены внутрь системы.
-
-```text
-Presentation
-
-↓
-
-Application (Use Cases)
-
-↓
-
-Domain
-
-↓
-
-Infrastructure
-```
-
-Ни один слой не знает о реализации внешнего слоя.
-
-Например:
-
-Domain не знает о PostgreSQL.
-
-Domain не знает о FastAPI.
-
-Domain не знает о Redis.
-
----
-
-## Domain Driven Design (DDD)
-
-Каждый бизнес-модуль выделяется в отдельный домен.
-
-Основные домены проекта:
-
-* Пользователи
-* Профили
-* Танцевальные стили
-* Поиск партнеров
-* Приглашения
-* События
-* Групповые сборы
-* Чаты
-* Рейтинги
-* Благодарности
-* Подписки
-* Платежи
-* Уведомления
-* Модерация
-
-Каждый домен развивается независимо.
-
----
-
-## Repository Pattern
-
-Работа с базой данных производится исключительно через Repository.
-
-Use Case никогда не работает напрямую с SQLAlchemy.
-
----
-
-## Unit Of Work
-
-Любая операция записи производится внутри Unit Of Work.
-
-Например:
-
-Регистрация пользователя
-
-↓
-
-Создание пользователя
-
-↓
-
-Создание профиля
-
-↓
-
-Создание настроек
-
-↓
-
-Commit
-
----
-
-## CQRS (частично)
-
-Команды отделяются от запросов.
-
-Пример:
-
-SearchPartnerQuery
-
-не изменяет БД.
-
-CreateInvitationCommand
-
-изменяет БД.
-
----
-
-# 3. Общая структура проекта
+# 2. Общая структура репозитория
 
 ```text
 DanceMate/
-
+│
 ├── backend/
 ├── frontend/
-├── docs/
+├── database/
 ├── infrastructure/
-├── .github/
+├── monitoring/
+├── tests/
+├── scripts/
+├── docker/
+│
+├── docs/
+│   ├── 01_PROJECT_STRUCTURE.md
+│   ├── 02_SYSTEM_ARCHITECTURE.md
+│   ├── 03_DATABASE_STRUCTURE.md
+│   ├── 04_PHYSICAL_DATA_MODEL.md
+│   ├── 05_DOMAIN_LAYER.md
+│   ├── 06_APPLICATION_LAYER.md
+│   ├── 07_INFRASTRUCTURE_LAYER.md
+│   ├── 08_API_LAYER.md
+│   ├── 09_SECURITY_ARCHITECTURE.md
+│   ├── 10_DEPLOYMENT_ARCHITECTURE.md
+│   ├── 11_TESTING_STRATEGY.md
+│   ├── 12_CODING_STANDARDS.md
+│   ├── 13_DEPENDENCIES.md
+│   ├── 14_GIT_WORKFLOW.md
+│   ├── 15_CI_CD_PIPELINE.md
+│   ├── 16_MONITORING.md
+│   ├── 17_PERFORMANCE.md
+│   ├── 18_PROJECT_ROADMAP.md
+│
 ├── docker-compose.yml
-├── LICENSE
+├── pyproject.toml
+├── requirements.txt
+├── .env.example
 ├── README.md
 └── CHANGELOG.md
 ```
 
 ---
 
-# 4. Назначение каталогов
+# 3. Назначение каталогов
 
 ## backend/
 
-Исходный код серверной части.
+Backend-приложение (FastAPI).
 
-Содержит всю бизнес-логику приложения.
+Содержит:
 
-Подробное описание:
-
-→ 02_BACKEND_STRUCTURE.md
+* API Layer
+* Application Layer
+* Domain Layer
+* Infrastructure Layer
 
 ---
 
 ## frontend/
 
-Исходный код Flutter-приложения.
+Flutter приложение:
 
-Подробное описание:
-
-→ 08_FRONTEND_STRUCTURE.md
+* UI
+* state management
+* API client
 
 ---
 
-## docs/
+## database/
 
-Полная архитектурная документация проекта.
+Полный SQL-проект PostgreSQL:
+
+* schema/
+* migrations (Alembic)
+* seed/
+* diagrams/
+* docs/
 
 ---
 
 ## infrastructure/
 
-Инфраструктурные файлы.
+Инфраструктура:
 
-Например:
-
-* Docker
-* Kubernetes
 * Nginx
-* CI/CD
-* Terraform (при необходимости)
+* Docker configs
+* Kubernetes manifests (future)
+* Terraform (future)
 
 ---
 
-## .github/
+## monitoring/
 
-Автоматизация GitHub Actions.
+Observability stack:
 
-Содержит:
-
-* сборку;
-* тестирование;
-* публикацию Docker-образов;
-* деплой.
+* Prometheus
+* Grafana
+* Loki
+* Alertmanager
+* OpenTelemetry
 
 ---
 
-# 5. Архитектура зависимостей
+## tests/
 
-Разрешенные зависимости:
+Все уровни тестирования:
+
+* unit
+* integration
+* e2e
+* load tests
+
+---
+
+## scripts/
+
+DevOps и utility скрипты:
+
+* database init
+* backup
+* deployment helpers
+* migration tools
+
+---
+
+## docker/
+
+Docker конфигурации:
+
+* backend container
+* worker container
+* database
+* redis
+* minio
+
+---
+
+# 4. Архитектурная модель
+
+Проект строго следует:
+
+* Clean Architecture
+* Domain Driven Design (DDD)
+* SOLID
+* Repository Pattern
+* Unit of Work
+* CQRS (частично)
+
+---
+
+# 5. Основные слои backend
 
 ```text
-API
-
-↓
-
-Use Cases
-
-↓
-
-Domain
-
-↓
-
-Interfaces
-
-↓
-
-Infrastructure
-
-↓
-
-Database
+API Layer
+    ↓
+Application Layer
+    ↓
+Domain Layer
+    ↓
+Infrastructure Layer
 ```
-
-Обратные зависимости запрещены.
-
-Например:
-
-Infrastructure
-
-НЕ может обращаться
-
-к Use Cases.
 
 ---
 
-# 6. Основные слои системы
+## API Layer
 
-## Presentation Layer
-
-Отвечает только за взаимодействие с клиентом.
-
-Содержит:
-
-* REST API;
-* WebSocket;
-* DTO;
-* сериализацию;
-* валидацию.
+* REST API
+* WebSocket
+* DTO
+* authentication middleware
 
 ---
 
 ## Application Layer
 
-Содержит сценарии использования системы.
-
-Каждый Use Case решает только одну задачу.
-
-Например:
-
-RegisterUser
-
-SearchPartner
-
-CreateInvitation
-
-AcceptInvitation
-
-LeaveRating
-
-CreateSquad
-
-SendGratitude
+* Use Cases
+* orchestration
+* transactions
+* workflow logic
 
 ---
 
 ## Domain Layer
 
-Самая важная часть проекта.
-
-Не зависит ни от одного фреймворка.
-
-Содержит:
-
-* Entities;
-* Value Objects;
-* Domain Events;
-* Domain Services;
-* Domain Exceptions;
-* бизнес-правила.
+* Entities
+* Value Objects
+* Domain Services
+* Domain Events
+* business rules
 
 ---
 
 ## Infrastructure Layer
 
-Содержит реализации интерфейсов.
-
-Например:
-
-PostgreSQL Repository
-
-Redis Cache
-
-SMS Provider
-
-S3 Storage
-
-Push Notifications
+* PostgreSQL (SQLAlchemy)
+* Redis
+* MinIO
+* external APIs
+* message brokers
 
 ---
 
-## Persistence Layer
+# 6. Доменные области
 
-Хранение данных.
+Проект разделён на bounded contexts:
 
-Используются:
-
-* PostgreSQL;
-* Alembic;
-* SQL Schema;
-* SQL Functions;
-* Triggers;
-* Views.
-
----
-
-# 7. Основные домены проекта
-
-Проект разделен на независимые бизнес-домены.
-
-* Authentication
 * User
 * Profile
 * Dance
-* Availability
 * Matching
 * Invitation
-* Meeting
 * Event
+* Meeting
 * Squad
 * Chat
 * Rating
 * Gratitude
-* Moderation
 * Notification
 * Media
 * Payment
 * Subscription
+* Moderation
 * Analytics
 * Administration
 
-Каждый домен имеет собственные:
+---
 
-* Entities;
-* Repository;
-* Use Cases;
-* Services;
-* API;
-* Tests.
+# 7. Архитектурные ограничения
+
+## Запрещено:
+
+* бизнес-логика в API Layer
+* SQL в Use Cases
+* зависимости Domain → Infrastructure
+* прямой доступ к ORM из Domain
 
 ---
 
-# 8. Правила разработки
+# 8. Принципы проектирования
 
-При добавлении новой функции разработчик обязан:
-
-1. Создать Entity (при необходимости).
-2. Создать Repository Interface.
-3. Создать Repository Implementation.
-4. Создать DTO.
-5. Создать Use Case.
-6. Создать API Endpoint.
-7. Добавить Unit Tests.
-8. Добавить Integration Tests.
-9. Обновить документацию.
-
-Новая бизнес-логика не должна размещаться в API или ORM-моделях.
+* Single Responsibility
+* Open/Closed
+* Liskov Substitution
+* Interface Segregation
+* Dependency Inversion
 
 ---
 
-# 9. Стандарты качества
+# 9. Работа с данными
 
-Проект должен соответствовать:
-
-* SOLID
-* Clean Architecture
-* Domain Driven Design
-* PEP 8
-* Black
-* Ruff
-* MyPy
-* Conventional Commits
-* Semantic Versioning
+* PostgreSQL — основная БД
+* Redis — кеш и pub/sub
+* MinIO — медиа-хранилище
+* Alembic — миграции
 
 ---
 
-# 10. Структура архитектурной документации
+# 10. Асинхронная архитектура
 
-Документация проекта разделена на специализированные документы:
+Используется:
 
-01_ROOT_STRUCTURE.md
+* async/await
+* WebSocket
+* Celery workers
+* event-driven patterns (future-ready)
 
-Описание корневой структуры проекта.
+---
 
-02_BACKEND_STRUCTURE.md
+# 11. Масштабирование
 
-Полная структура Backend.
+Поддерживается:
 
-03_DATABASE_STRUCTURE.md
+* горизонтальное масштабирование backend
+* stateless API
+* distributed workers
+* read replicas PostgreSQL
+* Redis cluster (future)
 
-Архитектура PostgreSQL и SQL-проекта.
+---
 
-04_DOMAIN_LAYER.md
+# 12. Наблюдаемость
 
-Описание Domain Layer.
+Интеграция:
 
-05_USE_CASES.md
+* logs (structured JSON)
+* metrics (Prometheus)
+* tracing (OpenTelemetry)
+* dashboards (Grafana)
 
-Архитектура Use Cases.
+---
 
-06_INFRASTRUCTURE.md
+# 13. CI/CD
 
-Описание Infrastructure Layer.
+Полностью автоматизирован:
 
-07_API.md
+* GitHub Actions
+* Docker build
+* testing pipeline
+* deployment pipeline
 
-REST API и WebSocket.
+---
 
-08_FRONTEND_STRUCTURE.md
+# 14. Безопасность
 
-Архитектура Flutter-приложения.
+* JWT auth
+* RBAC
+* rate limiting
+* input validation
+* audit logs
 
-09_DEPENDENCIES.md
+---
 
-Диаграммы зависимостей между слоями.
+# 15. Документация архитектуры
 
-10_SOLID_RULES.md
+Полная документация:
 
-Правила разработки согласно SOLID.
+* 01_PROJECT_STRUCTURE.md
+* 02_SYSTEM_ARCHITECTURE.md
+* 03_DATABASE_STRUCTURE.md
+* 04_PHYSICAL_DATA_MODEL.md
+* 05_DOMAIN_LAYER.md
+* 06_APPLICATION_LAYER.md
+* 07_INFRASTRUCTURE_LAYER.md
+* 08_API_LAYER.md
+* 09_SECURITY_ARCHITECTURE.md
+* 10_DEPLOYMENT_ARCHITECTURE.md
+* 11_TESTING_STRATEGY.md
+* 12_CODING_STANDARDS.md
+* 13_DEPENDENCIES.md
+* 14_GIT_WORKFLOW.md
+* 15_CI_CD_PIPELINE.md
+* 16_MONITORING.md
+* 17_PERFORMANCE.md
+* 18_PROJECT_ROADMAP.md
 
-11_NAMING.md
+---
 
-Правила именования файлов, классов и модулей.
+# 16. Принцип обновления документации
 
-12_TESTING.md
+Любое изменение в коде требует:
 
-Архитектура тестирования.
+* обновления соответствующего документа
+* проверки согласованности слоёв
+* обновления диаграмм при необходимости
 
-13_DEPLOYMENT.md
+---
 
-Docker, CI/CD, Production Deployment.
+# 17. Итог
+
+Этот документ является **входной точкой всей архитектуры DanceMate**.
+
+Он связывает:
+
+* код
+* базу данных
+* инфраструктуру
+* CI/CD
+* мониторинг
+* продуктовую стратегию

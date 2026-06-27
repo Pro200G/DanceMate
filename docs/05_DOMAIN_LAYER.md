@@ -1,336 +1,446 @@
-# 04_DOMAIN_LAYER.md
+# 05_DOMAIN_LAYER.md
 
-# Domain Layer
+# Domain Layer (DDD Core)
 
 **Проект:** DanceMate
 **Версия:** 1.0
+**Стиль:** Domain-Driven Design (Strict)
+**Язык спецификации:** Python-like pseudo-code + архитектурные правила
 
 ---
 
 # 1. Назначение
 
-Domain Layer является центральной частью системы и реализует бизнес-модель приложения.
+Domain Layer — это **ядро системы**, полностью независимое от:
 
-Этот слой:
+* FastAPI
+* SQLAlchemy
+* Redis
+* PostgreSQL
+* внешних API
 
-* не зависит от FastAPI;
-* не зависит от PostgreSQL;
-* не зависит от SQLAlchemy;
-* не зависит от Redis;
-* не зависит от внешних API;
-* не содержит HTTP-запросов и SQL-запросов.
+Он содержит только:
 
-В Domain Layer размещаются только бизнес-сущности, правила и интерфейсы.
-
----
-
-# 2. Место Domain Layer в архитектуре
-
-```text
-                   +----------------------+
-                   |      API Layer       |
-                   +----------+-----------+
-                              |
-                              v
-                   +----------------------+
-                   |  Application Layer   |
-                   +----------+-----------+
-                              |
-                              v
-                   +----------------------+
-                   |    Domain Layer      |
-                   +----------+-----------+
-                              |
-                              v
-                   +----------------------+
-                   | Infrastructure Layer |
-                   +----------------------+
-```
-
-Domain Layer не зависит ни от одного другого слоя.
-
-Все остальные слои зависят от Domain Layer.
+* бизнес-логику;
+* правила предметной области;
+* инварианты;
+* доменные события;
+* агрегаты.
 
 ---
 
-# 3. Принципы Domain Layer
+# 2. Главный принцип
 
-Domain Layer реализует:
-
-* Domain-Driven Design (DDD);
-* SOLID;
-* Clean Architecture;
-* Dependency Inversion Principle.
-
-Основные требования:
-
-* отсутствие зависимостей от инфраструктуры;
-* неизменяемость бизнес-правил;
-* повторное использование бизнес-логики;
-* возможность тестирования без базы данных.
-
----
-
-# 4. Структура каталога
-
-```text
-app/
-└── domain/
-    ├── entities/
-    ├── value_objects/
-    ├── repositories/
-    ├── services/
-    ├── events/
-    ├── specifications/
-    ├── exceptions/
-    ├── policies/
-    ├── enums/
-    └── shared/
+```text id="domain_rule"
+DOMAIN НЕ ЗНАЕТ НИЧЕГО О ВНЕШНЕМ МИРЕ
 ```
 
 ---
 
-# 5. Entities
+# 3. Структура Domain Layer
 
-Каталог содержит основные бизнес-сущности.
-
-```text
-entities/
-├── account.py
-├── user.py
-├── profile.py
-├── invitation.py
-├── meeting.py
-├── event.py
-├── squad.py
-├── conversation.py
-├── message.py
-├── rating.py
-├── gratitude.py
-├── notification.py
-├── payment.py
-├── subscription.py
-└── media.py
+```text id="domain_tree"
+domain/
+│
+├── entities/
+├── value_objects/
+├── aggregates/
+├── services/
+├── events/
+├── exceptions/
+├── repositories/   # ONLY INTERFACES
+└── rules/
 ```
 
-Каждая Entity:
+---
 
-* имеет собственный идентификатор;
-* содержит бизнес-методы;
-* контролирует своё состояние;
-* не знает о способе хранения данных.
+# 4. Base Domain Model
+
+## 4.1 Entity
+
+```python id="entity_base"
+from dataclasses import dataclass
+from typing import Any
+from uuid import UUID, uuid4
+
+@dataclass
+class Entity:
+    id: UUID = uuid4()
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, Entity) and self.id == other.id
+```
+
+---
+
+## 4.2 Aggregate Root
+
+```python id="aggregate_base"
+class AggregateRoot(Entity):
+
+    def __init__(self):
+        self._events: list = []
+
+    def add_event(self, event):
+        self._events.append(event)
+
+    def pull_events(self):
+        events = self._events[:]
+        self._events.clear()
+        return events
+```
+
+---
+
+## 4.3 Value Object
+
+```python id="vo_base"
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class ValueObject:
+    pass
+```
+
+---
+
+# 5. Domain Entities
+
+---
+
+## 5.1 User
+
+```python id="user_entity"
+class User(Entity):
+
+    def __init__(self, email: str, phone: str):
+        self.email = email
+        self.phone = phone
+        self.is_active = True
+
+    def deactivate(self):
+        self.is_active = False
+```
+
+---
+
+## 5.2 Profile
+
+```python id="profile_entity"
+class Profile(Entity):
+
+    def __init__(self, user_id, name, age):
+        self.user_id = user_id
+        self.name = name
+        self.age = age
+        self.rating = 0.0
+
+    def update_rating(self, value: float):
+        self.rating = value
+```
+
+---
+
+## 5.3 Event
+
+```python id="event_entity"
+class Event(AggregateRoot):
+
+    def __init__(self, creator_id, title):
+        super().__init__()
+        self.creator_id = creator_id
+        self.title = title
+        self.members: list = []
+
+    def add_member(self, user_id):
+        if user_id in self.members:
+            return
+
+        self.members.append(user_id)
+```
+
+---
+
+## 5.4 Chat
+
+```python id="chat_entity"
+class Chat(AggregateRoot):
+
+    def __init__(self, participants: list):
+        super().__init__()
+        self.participants = participants
+        self.messages = []
+
+    def send_message(self, sender_id, text: str):
+        message = {
+            "sender_id": sender_id,
+            "text": text
+        }
+        self.messages.append(message)
+```
+
+---
+
+## 5.5 Rating
+
+```python id="rating_entity"
+class Rating(Entity):
+
+    def __init__(self, user_id, value: int):
+        self.user_id = user_id
+        self.value = value
+
+    def validate(self):
+        if not (1 <= self.value <= 5):
+            raise ValueError("Rating must be 1..5")
+```
 
 ---
 
 # 6. Value Objects
 
-Value Object представляет неизменяемый объект без собственной идентичности.
-
-```text
-value_objects/
-├── phone.py
-├── email.py
-├── full_name.py
-├── geo_location.py
-├── dance_level.py
-├── age_range.py
-├── money.py
-└── schedule.py
-```
-
-Основные свойства:
-
-* неизменяемость (immutable);
-* сравнение по значению;
-* отсутствие собственного идентификатора.
-
 ---
 
-# 7. Repositories
+## 6.1 Email
 
-Domain Layer содержит только интерфейсы репозиториев.
+```python id="email_vo"
+import re
 
-```text
-repositories/
-├── account_repository.py
-├── user_repository.py
-├── profile_repository.py
-├── event_repository.py
-├── invitation_repository.py
-├── meeting_repository.py
-├── chat_repository.py
-├── payment_repository.py
-└── notification_repository.py
-```
+class Email(ValueObject):
 
-Реализация находится в Infrastructure Layer.
+    def __init__(self, value: str):
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
+            raise ValueError("Invalid email")
 
----
-
-# 8. Domain Services
-
-Domain Service используется, если бизнес-операция не принадлежит одной сущности.
-
-```text
-services/
-├── matching_service.py
-├── recommendation_service.py
-├── invitation_service.py
-├── meeting_service.py
-├── subscription_service.py
-├── payment_service.py
-└── moderation_service.py
+        self.value = value
 ```
 
 ---
 
-# 9. Domain Events
+## 6.2 Phone
 
-Domain Events фиксируют произошедшие бизнес-события.
+```python id="phone_vo"
+class Phone(ValueObject):
 
-```text
-events/
-├── account_created.py
-├── profile_created.py
-├── invitation_sent.py
-├── invitation_accepted.py
-├── meeting_created.py
-├── event_created.py
-├── payment_completed.py
-└── subscription_activated.py
+    def __init__(self, value: str):
+        if len(value) < 10:
+            raise ValueError("Invalid phone")
+
+        self.value = value
 ```
 
 ---
 
-# 10. Specifications
+## 6.3 Location
 
-Specification описывает сложные бизнес-условия.
+```python id="location_vo"
+class Location(ValueObject):
 
-```text
-specifications/
-├── can_create_event.py
-├── can_send_invitation.py
-├── can_join_meeting.py
-├── profile_is_complete.py
-└── subscription_is_active.py
-```
-
-Specifications позволяют инкапсулировать правила проверки без дублирования кода.
-
----
-
-# 11. Policies
-
-Policies описывают бизнес-политики приложения.
-
-```text
-policies/
-├── privacy_policy.py
-├── moderation_policy.py
-├── payment_policy.py
-├── recommendation_policy.py
-└── notification_policy.py
+    def __init__(self, city: str, country: str):
+        self.city = city
+        self.country = country
 ```
 
 ---
 
-# 12. Exceptions
+# 7. Domain Services
 
-Domain Layer использует только собственные исключения.
+---
 
-```text
-exceptions/
-├── domain_exception.py
-├── validation_exception.py
-├── profile_not_found.py
-├── invitation_expired.py
-├── payment_failed.py
-└── subscription_required.py
+## 7.1 RatingService
+
+```python id="rating_service"
+class RatingService:
+
+    def calculate(self, ratings: list[int]) -> float:
+        if not ratings:
+            return 0.0
+
+        return sum(ratings) / len(ratings)
 ```
 
 ---
 
-# 13. Enums
+## 7.2 MatchingService
 
-Все перечисления располагаются централизованно.
+```python id="matching_service"
+class MatchingService:
 
-```text
-enums/
-├── gender.py
-├── dance_style.py
-├── invitation_status.py
-├── meeting_status.py
-├── payment_status.py
-├── notification_type.py
-└── subscription_type.py
+    def match(self, user_a, user_b) -> float:
+        score = 0
+
+        if user_a.city == user_b.city:
+            score += 50
+
+        if user_a.dance_style == user_b.dance_style:
+            score += 50
+
+        return score
 ```
 
 ---
 
-# 14. Shared
+# 8. Domain Events
 
-Общие базовые классы Domain Layer.
-
-```text
-shared/
-├── aggregate_root.py
-├── entity.py
-├── value_object.py
-├── domain_event.py
-└── repository.py
+```python id="domain_event"
+class DomainEvent:
+    def __init__(self):
+        self.timestamp = None
 ```
 
 ---
 
-# 15. Правила разработки
+## 8.1 UserCreatedEvent
 
-В Domain Layer запрещено:
+```python id="user_created_event"
+class UserCreatedEvent(DomainEvent):
 
-* использовать SQLAlchemy;
-* использовать FastAPI;
-* выполнять SQL-запросы;
-* использовать HTTP-клиенты;
-* импортировать инфраструктурные зависимости.
-
-Допускается использование только стандартной библиотеки Python и внутренних компонентов Domain Layer.
-
----
-
-# 16. Взаимодействие со слоями
-
-```text
-API Layer
-        │
-        ▼
-Application Layer
-        │
-        ▼
-Domain Layer
-        │
-        ▼
-Infrastructure Layer
+    def __init__(self, user_id):
+        super().__init__()
+        self.user_id = user_id
 ```
 
-Domain Layer определяет интерфейсы, которые реализуются в Infrastructure Layer.
+---
+
+## 8.2 EventCreatedEvent
+
+```python id="event_created_event"
+class EventCreatedEvent(DomainEvent):
+
+    def __init__(self, event_id):
+        super().__init__()
+        self.event_id = event_id
+```
 
 ---
 
-# 17. Связь с базой данных
+# 9. Repository Interfaces (IMPORTANT)
 
-Domain Layer не знает о структуре PostgreSQL.
+```python id="repo_interface"
+from abc import ABC, abstractmethod
 
-Преобразование между Domain Entity и ORM Model выполняется через Mapper в Infrastructure Layer.
+class UserRepository(ABC):
+
+    @abstractmethod
+    def get_by_id(self, user_id): pass
+
+    @abstractmethod
+    def save(self, user): pass
+```
 
 ---
 
-# 18. Покрытие тестами
+## ❗ КРИТИЧНО
 
-Все сущности Domain Layer должны иметь модульные тесты.
+Domain:
 
-Минимальное покрытие:
+* НЕ знает SQLAlchemy
+* НЕ знает PostgreSQL
+* НЕ знает Redis
 
-* создание сущностей;
-* бизнес-методы;
-* проверки инвариантов;
-* генерация Domain Events;
-* обработка исключений.
+---
+
+# 10. Domain Rules
+
+---
+
+## 10.1 Business Rules
+
+```text id="rules"
+- Пользователь не может оценить себя
+- Рейтинг всегда 1..5
+- Участник не может быть добавлен дважды
+- Чат должен иметь минимум 2 участников
+```
+
+---
+
+## 10.2 Validation Rules
+
+* Value Objects валидируют данные
+* Entities защищают инварианты
+* Services не хранят состояние
+
+---
+
+# 11. Domain Exceptions
+
+```python id="exceptions"
+class DomainException(Exception):
+    pass
+
+
+class ValidationException(DomainException):
+    pass
+```
+
+---
+
+# 12. Domain Event Flow
+
+```text id="event_flow"
+Entity → Domain Event → Application Layer → Infrastructure (Queue/Bus)
+```
+
+---
+
+# 13. Связь с другими слоями
+
+Domain Layer:
+
+```text id="deps"
+НЕ ЗАВИСИТ НИ ОТ ЧЕГО
+```
+
+Но используется:
+
+* Application Layer
+* Infrastructure Layer (через интерфейсы)
+
+---
+
+# 14. Анти-паттерны (ЗАПРЕЩЕНО)
+
+❌ нельзя:
+
+* SQL в домене
+* ORM модели в домене
+* FastAPI зависимости
+* Redis вызовы
+* HTTP запросы
+* бизнес-логика в API
+
+---
+
+# 15. Расширение системы
+
+Domain легко расширяется:
+
+* новые Entities
+* новые Value Objects
+* новые Domain Services
+* новые Events
+
+---
+
+# 16. Связь с архитектурой
+
+* `02_SYSTEM_ARCHITECTURE.md`
+* `03_DATABASE_STRUCTURE.md`
+* `04_PHYSICAL_DATA_MODEL.md`
+* `06_APPLICATION_LAYER.md`
+
+---
+
+# 17. Итог
+
+Domain Layer — это:
+
+> ❗ единственный источник бизнес-истины в системе
+
+Он должен быть:
+
+* чистым
+* изолированным
+* тестируемым
+* независимым от технологий
